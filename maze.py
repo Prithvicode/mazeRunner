@@ -115,6 +115,7 @@ class Cell:
 
         line = Line(p1,p2)
         line.draw(self._win,color)
+        print(f"Drawing line from ({self._x1,self._y1}) to {to_cell._x1, to_cell._y1}")
 
         
         
@@ -139,6 +140,8 @@ class Maze:
          # to recreate random sequence
         
         self._break_walls_r(0,0)
+        self._reset_cells_visited()
+        self._solve_r(0,0)
 
     def _create_cells(self): # notice the cells and not cell
         
@@ -201,25 +204,7 @@ class Maze:
         current_cell = self._cells[i][j]
         current_cell.visited = True
 
-        directions = {
-            "top": (0, -1),
-            "bottom": (0, 1),
-            "right": (1, 0),
-            "left": (-1, 0)
-        }
-
-        # On edges
-        if i == 0:
-            del directions["left"]
-        if i == self.num_cols - 1:
-            del directions["right"]
-        if j == 0:
-            del directions["top"]
-        if j == self.num_rows - 1:
-            del directions["bottom"]
-       
-        adjacentCells = [(i + value[0], j + value[1]) for key, value in directions.items()]
-        print(f"({i,j}: {adjacentCells})") 
+        adjacentCells = self._get_adjacent_cells(i,j)
 
         random.shuffle(adjacentCells)
 
@@ -253,23 +238,110 @@ class Maze:
                 # Recur for the next cell
                 self._break_walls_r(x, y)
 
-        # for coordToVisit in adjacentCells:
-        #      if self._cells[coordToVisit[0]][coordToVisit[1]].visited == False :
-        #         self._break_walls_r(coordToVisit[0],coordToVisit[1])
-        #         print(coordToVisit)
 
 
+    def _get_adjacent_cells(self,i,j):
+        
+        directions = self._get_adjacent_directions(i,j)
+        adjacentCells = [(i + value[0], j + value[1]) for key, value in directions.items()]
+        # print(f"({i,j}: {adjacentCells})") 
+        return adjacentCells
+
+    def _get_adjacent_directions(self,i,j):
+        directions = {
+            "top":  (0, -1),
+            "bottom": (0, 1),
+            "right": (1, 0),
+            "left": (-1, 0)
+        }
+        # On Boundaries
+        if i == 0:
+            del directions["left"]
+        if i == self.num_cols - 1:
+            del directions["right"]
+        if j == 0:
+            del directions["top"]
+        if j == self.num_rows - 1:
+            del directions["bottom"]
+        
+        return directions
+
+
+
+    def _solve_r(self, i, j):
+        
+        self._animate()
+
+        if i == self.num_cols - 1 and j == self.num_rows - 1:
+            print("Solution found!")
+            return True
+
+        current_cell = self._cells[i][j]
+        current_cell.visited = True
+        # print(f"Visiting cell: ({i}, {j})")
+
+        adjacent_cells = self._get_adjacent_cells(i, j)
+
+        for x, y in adjacent_cells:
+            neighbor_cell = self._cells[x][y]
+
+            if not neighbor_cell.visited: 
+
+                if x == i and y < j:  # Top 
+                    if not current_cell.has_top_wall and not neighbor_cell.has_bottom_wall:
+                        # Draw before, else it skips it.
+                        current_cell.draw_move(neighbor_cell)
+                        if self._solve_r(x, y):
+                            return True
+                        else:
+                            current_cell.draw_move(neighbor_cell, undo=True)
+                
+                elif x == i and y > j:  # Bottom 
+                    if not current_cell.has_bottom_wall and not neighbor_cell.has_top_wall:
+                        current_cell.draw_move(neighbor_cell)
+                        if self._solve_r(x, y):
+                            return True
+                        else:
+                            current_cell.draw_move(neighbor_cell, undo=True)
+
+                elif x < i and y == j:  # Left 
+                    if not current_cell.has_left_wall and not neighbor_cell.has_right_wall:
+                        current_cell.draw_move(neighbor_cell)
+                        if self._solve_r(x, y):
+                            return True
+                        else:
+                            current_cell.draw_move(neighbor_cell, undo=True)
+
+                elif x > i and y == j:  # Right 
+                    if not current_cell.has_right_wall and not neighbor_cell.has_left_wall:
+                        current_cell.draw_move(neighbor_cell)
+                        if self._solve_r(x, y):
+                            return True
+                        else:
+                            current_cell.draw_move(neighbor_cell, undo=True)
+
+        # bactrack
+        return False           
+                
+
+    
+    def _reset_cells_visited(self):
+        for col in range(self.num_cols):
+            for row in range(self.num_rows):
+                self._cells[col][row].visited = False
+            
+        
     def _animate(self):
         win.redraw()     
-        time.sleep(0.05) 
+        time.sleep(0.005) 
                       
                   
         
 if __name__ == "__main__":
-    win = Window(500, 500)
+    win = Window(600, 600)
 
-    maze =Maze(10,10, 10,10,40,40,win.canvas)
-    # maze =Maze(3,3, 3,3,40,40,win.canvas)
-
-    # line.draw(win.canvas, "red")
+    # (startX, startY, numRow(↓), numCols(→), sizex, sizey)
+    # maze =Maze(10, 10, 40, 40, 10, 10, win.canvas) 
+    maze =Maze(20, 20, 10, 10, 40, 40, win.canvas) 
+    # maze =Maze(30,30, 10,50,10,10,win.canvas)
     win.wait_for_close()
