@@ -137,6 +137,8 @@ class Maze:
         if self.seed is not None:
             random.seed(self.seed)
          # to recreate random sequence
+        
+        self._break_walls_r(0,0)
 
     def _create_cells(self): # notice the cells and not cell
         
@@ -189,21 +191,73 @@ class Maze:
         
 
     def _break_walls_r(self, i, j):
-        # current_cell = self._cells[i][j]
-        # current_cell.visited = True
+        """Dfs"""
+        # self._cells holds the all the nodes
+        # find adjacent nodes of current node. 
+        # choose random node to visit.
+        # recurse until all nodes in self._cells are visited.
+        ### rawdogged it, could finesse it.
+        
+        current_cell = self._cells[i][j]
+        current_cell.visited = True
 
-        # while True:
-        #     possbile_directions = []
+        directions = {
+            "top": (0, -1),
+            "bottom": (0, 1),
+            "right": (1, 0),
+            "left": (-1, 0)
+        }
 
-        #     adjacent_coord = [(0, -1), (0, 1), (1, 0), (-1,0)]
-            
-        #     for coord in adjacent_coord:
-        #         next_x = current_cell
-            
-            # check the  boundary values
-           
+        # On edges
+        if i == 0:
+            del directions["left"]
+        if i == self.num_cols - 1:
+            del directions["right"]
+        if j == 0:
+            del directions["top"]
+        if j == self.num_rows - 1:
+            del directions["bottom"]
+       
+        adjacentCells = [(i + value[0], j + value[1]) for key, value in directions.items()]
+        print(f"({i,j}: {adjacentCells})") 
 
-        pass
+        random.shuffle(adjacentCells)
+
+        for coordToVisit in adjacentCells:
+            x, y = coordToVisit  # col, row
+            if not self._cells[x][y].visited:
+                # (1,0)
+                # (1,1)
+                # (1,2)
+                if x == i: 
+                    if y < j:  
+                        current_cell.has_top_wall = False
+                        self._cells[x][y].has_bottom_wall = False
+                    else:  
+                        current_cell.has_bottom_wall = False
+                        self._cells[x][y].has_top_wall = False
+
+                elif y == j:  # (0,1),(1,1),(2,1)
+                    if x < i:  
+                        current_cell.has_left_wall = False
+                        self._cells[x][y].has_right_wall = False
+                    else: 
+                        current_cell.has_right_wall = False
+                        self._cells[x][y].has_left_wall = False
+
+                # Update walls
+                self._draw_cell(i, j)
+                self._draw_cell(x, y)
+                ### self._draw_all_cells() slows down.
+
+                # Recur for the next cell
+                self._break_walls_r(x, y)
+
+        # for coordToVisit in adjacentCells:
+        #      if self._cells[coordToVisit[0]][coordToVisit[1]].visited == False :
+        #         self._break_walls_r(coordToVisit[0],coordToVisit[1])
+        #         print(coordToVisit)
+
 
     def _animate(self):
         win.redraw()     
@@ -213,19 +267,9 @@ class Maze:
         
 if __name__ == "__main__":
     win = Window(500, 500)
-    point1 = Point(10, 10)
-    point2 = Point(20, 20)
-    line = Line(point1, point2)
-
-    # cell =Cell (win.canvas)
-    # cell2 = Cell(win.canvas)
-    # cell.draw(point1, point2)
-    # cell.draw_move(cell2)
 
     maze =Maze(10,10, 10,10,40,40,win.canvas)
-    # maze._create_cells()
-    # maze._cells[0][0].draw_move(maze._cells[0][1])
+    # maze =Maze(3,3, 3,3,40,40,win.canvas)
 
-   
     # line.draw(win.canvas, "red")
     win.wait_for_close()
